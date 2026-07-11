@@ -9,7 +9,10 @@
   },
   "license": "MIT",
   "urls": {
-    "repository": "https://github.com/FFFold/active-image-recognition-plugin"
+    "repository": "https://github.com/FFFold/active-image-recognition-plugin",
+    "homepage": "https://github.com/FFFold/active-image-recognition-plugin",
+    "documentation": "https://github.com/FFFold/active-image-recognition-plugin/blob/main/README.md",
+    "issues": "https://github.com/FFFold/active-image-recognition-plugin/issues"
   },
   "host_application": {
     "min_version": "1.0.0",
@@ -25,7 +28,8 @@
     "llm.generate"
   ],
   "i18n": {
-    "default_locale": "zh-CN"
+    "default_locale": "zh-CN",
+    "supported_locales": ["zh-CN"]
   },
   "id": "dev.fold.active-image-recognition"
 }
