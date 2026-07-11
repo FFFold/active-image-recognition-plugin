@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "version": "1.0.0",
+  "name": "主动识图插件",
+  "description": "关闭自动被动识图，为 Bot 提供主动识图工具，让 Bot 自己选择查看哪些图片",
+  "author": {
+    "name": "Fold"
+  },
+  "license": "MIT",
+  "urls": {
+    "repository": "https://github.com/FFFold/active-image-recognition-plugin"
+  },
+  "host_application": {
+    "min_version": "1.0.0",
+    "max_version": "1.99.99"
+  },
+  "sdk": {
+    "min_version": "2.5.1",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [],
+  "capabilities": [
+    "send.text",
+    "llm.generate"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN"
+  },
+  "id": "dev.fold.active-image-recognition"
+}
