@@ -224,7 +224,17 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         if not description:
             return {"content": f"图片 #{image_number} 识别结果为空"}
 
-        return {"content": f"图片 #{image_number} 的内容：{description}"}
+        return {
+            "content": f"图片 #{image_number} 的内容：{description}",
+            "content_items": [
+                {
+                    "content_type": "image",
+                    "data": b64_data,
+                    "mime_type": f"image/{img_format}",
+                    "description": description,
+                },
+            ],
+        }
 
 
 def create_plugin() -> ActiveImageRecognitionPlugin:
