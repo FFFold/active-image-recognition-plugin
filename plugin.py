@@ -167,6 +167,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             "查看消息历史中的图片，通过图片编号指定要识别的图片。"
             "调用后返回图片的详细描述。"
         ),
+        core_tool=True,
         parameters=[
             ToolParameterInfo(
                 name="image_number",
