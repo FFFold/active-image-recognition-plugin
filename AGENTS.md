@@ -9,7 +9,10 @@
 ## 设计要点
 
 - `@HookHandler("chat.receive.before_process", BLOCKING, EARLY)` 在消息处理前拦截所有图片，替换为 `[图片 #N]` 占位符，清除二进制数据 → 阻止 MaiBot 默认 VLM 被动识别
-- `@Tool("recognize_image", core_tool=True)` LLM 在 planner 阶段始终可见，通过 `image_number` 参数指定要识别的图片
+- `@Tool("recognize_image", core_tool=True)` 提供 LLM 主动识图工具，通过 `image_number` 指定图片、可选 `question` 参数携带具体问题
+  - **注意**：`core_tool=True` 实际生效依赖宿主框架，当前版本下 LLM 需先调用 `tool_search` 发现该工具
+- 提示词从框架 `prompts/{locale}/image_description.prompt` 加载，优先读取 `data/custom_prompts/` 用户自定义覆盖，回退到内置默认文本。模块级 `_prompt_cache` 缓存避免重复文件 I/O
+- 有 `question` 时拼装为 `"用户的问题是：{question}\n\n{prompt_base}"` 传给 VLM
 - 转发合集消息递归处理，扁平编号
 - 缓存用 `deque` + LRU 淘汰（默认上限 200），存 key `(session_id, counter)` → `{hash, bytes, format}`
 - 缓存为实例变量（`__init__` 初始化），非类变量，重启清空
