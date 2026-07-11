@@ -194,7 +194,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             ToolParameterInfo(
                 name="image_number",
                 param_type=ToolParamType.INTEGER,
-                description="图片编号，对应消息历史中 [图片 #N] 的 N",
+                description="图片编号，传入纯数字，对应消息历史中 [图片 #N] 的 N",
                 required=True,
             ),
             ToolParameterInfo(
@@ -209,7 +209,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         stream_id = kwargs.get("stream_id", "")
 
         if image_number < 1:
-            return {"content": "图片编号必须大于 0"}
+            return {"content": "参数错误：必须通过 image_number 指定有效的图片编号（正整数），对应消息中的「[图片 #N]」。正确示例：recognize_image(image_number=1)。"}
 
         key = (stream_id, image_number)
         entry = self._image_cache.get(key)
