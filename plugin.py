@@ -198,6 +198,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
 
         try:
             result = await self.ctx.llm.generate(
+                model="vlm",
                 prompt=[
                     {
                         "role": "user",
