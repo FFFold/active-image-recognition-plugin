@@ -4,10 +4,32 @@ from __future__ import annotations
 
 import base64
 from collections import deque
+from pathlib import Path
 from typing import Any
 
 from maibot_sdk import Field, HookHandler, MaiBotPlugin, PluginConfigBase, Tool
 from maibot_sdk.types import HookMode, HookOrder, ToolParameterInfo, ToolParamType
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_CUSTOM_PROMPTS_DIR = _PROJECT_ROOT / "data" / "custom_prompts"
+_PROMPTS_DIR = _PROJECT_ROOT / "prompts"
+_DEFAULT_LOCALE = "zh-CN"
+
+_DEFAULT_PROMPT = (
+    "请用中文详细描述这张图片的内容。"
+    "如果有文字，请把文字概括出来。"
+    "注意其主题和直观感受，输出一段平实文本，最多150字。"
+)
+
+_prompt_cache: dict[str, str | None] = {}
+
+
+def _load_description_prompt(locale: str) -> str | None:
+    for base in (_CUSTOM_PROMPTS_DIR, _PROMPTS_DIR):
+        path = base / locale / "image_description.prompt"
+        if path.is_file():
+            return path.read_text(encoding="utf-8").strip()
+    return None
 
 
 class PluginSectionConfig(PluginConfigBase):
@@ -175,9 +197,15 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
                 description="图片编号，对应消息历史中 [图片 #N] 的 N",
                 required=True,
             ),
+            ToolParameterInfo(
+                name="question",
+                param_type=ToolParamType.STRING,
+                description="你对这张图片的具体问题，例如「这是什么品牌的产品？」。不提供则默认详细描述。",
+                required=False,
+            ),
         ],
     )
-    async def handle_recognize_image(self, image_number: int = 0, **kwargs: Any) -> dict[str, Any]:
+    async def handle_recognize_image(self, image_number: int = 0, question: str | None = None, **kwargs: Any) -> dict[str, Any]:
         stream_id = kwargs.get("stream_id", "")
 
         if image_number < 1:
@@ -196,6 +224,17 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         img_format = entry.get("format", "png")
         b64_data = base64.b64encode(raw_bytes).decode("utf-8")
 
+        locale = _DEFAULT_LOCALE
+        prompt_base = _prompt_cache.get(locale)
+        if prompt_base is None:
+            prompt_base = _load_description_prompt(locale) or _DEFAULT_PROMPT
+            _prompt_cache[locale] = prompt_base
+
+        if question:
+            prompt_text = f"用户的问题是：{question}\n\n{prompt_base}"
+        else:
+            prompt_text = prompt_base
+
         try:
             result = await self.ctx.llm.generate(
                 model="vlm",
@@ -205,7 +244,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
                         "content": [
                             {
                                 "type": "text",
-                                "text": "请用中文详细描述这张图片的内容。如果有文字，请把文字概括出来。注意其主题和直观感受，输出一段平实文本，最多150字。",
+                                "text": prompt_text,
                             },
                             {
                                 "type": "image_url",
