@@ -272,6 +272,41 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             "modified_kwargs": {"message": message},
         }
 
+    # --- 提示词 ---
+
+    def _get_prompt_template(self) -> str:
+        locale = _DEFAULT_LOCALE
+        cache_key = f"template_{locale}"
+        cached = self._prompt_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        prompt = self._load_custom_prompt(locale)
+        if not prompt:
+            prompt = self.config.recognition.prompt.strip()
+        if not prompt:
+            prompt = _DEFAULT_PROMPT
+
+        self._prompt_cache[cache_key] = prompt
+        return prompt
+
+    def _load_custom_prompt(self, locale: str) -> str | None:
+        data_dir = getattr(self.ctx.paths, "data_dir", None)
+        if data_dir is None:
+            return None
+        path = Path(data_dir) / "custom_prompts" / locale / "image_description.prompt"
+        if path.is_file():
+            return path.read_text(encoding="utf-8").strip()
+        return None
+
+    def _build_prompt(self, question: str | None) -> str:
+        template = self._get_prompt_template()
+        if not question:
+            return template
+        if "{question}" in template:
+            return template.replace("{question}", question)
+        return f"用户的问题是：{question}\n\n{template}"
+
     @Tool(
         "recognize_image",
         description=(
@@ -314,16 +349,21 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         img_format = entry.get("format", "png")
         b64_data = base64.b64encode(raw_bytes).decode("utf-8")
 
-        locale = _DEFAULT_LOCALE
-        prompt_base = _prompt_cache.get(locale)
-        if prompt_base is None:
-            prompt_base = _load_description_prompt(locale) or _DEFAULT_PROMPT
-            _prompt_cache[locale] = prompt_base
+        mode = self.config.recognition.mode
 
-        if question:
-            prompt_text = f"用户的问题是：{question}\n\n{prompt_base}"
-        else:
-            prompt_text = prompt_base
+        if mode == "multimodal":
+            return {
+                "content": f"已将图片 #{image_number} 的数据返回，请直接查看。",
+                "content_items": [
+                    {
+                        "content_type": "image",
+                        "data": b64_data,
+                        "mime_type": f"image/{img_format}",
+                    },
+                ],
+            }
+
+        prompt_text = self._build_prompt(question)
 
         try:
             result = await self.ctx.llm.generate(
