@@ -11,7 +11,7 @@
 
 ### 配置
 
-- `[recognition]` 段控制模式：`mode`（"text"/"multimodal"）、`dual_recognition`（纯文本下开启框架被动识图）、`prompt`（自定义提示词）
+- `[recognition]` 段控制模式：`mode`（"text"/"multimodal"）、`dual_recognition`（纯文本下开启框架被动识图）、`prompt`（自定义提示词）、`use_custom_vlm_model` / `vlm_model`（独立 VLM 模型）
 
 ### Hook 流程
 
@@ -38,7 +38,7 @@
 
 - `deque` + LRU 淘汰（默认上限 200），存 key `(session_id, counter)` → `{hash, bytes, format}`
 - 会话计数器 `_session_counters: dict[str, int]` 跨消息单调递增
-- `_pending_message_image_range: dict[str, tuple[int, int]]` 记录单消息图片编号范围
+- `_pending_message_image_range: dict[str, list[tuple[int, int]]]` 记录单消息图片编号范围（list-based 队列防并发覆盖）
 
 ## 运行
 
