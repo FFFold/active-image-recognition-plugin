@@ -63,7 +63,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         self._image_cache: dict[tuple[str, int], dict[str, Any]] = {}
         self._cache_keys: deque[tuple[str, int]] = deque()
         self._pending_message_image_range: dict[str, tuple[int, int]] = {}
-        self._prompt_cache: dict[str, str | None] = {}
+        self._prompt_cache: dict[str, str] = {}
 
     async def on_load(self) -> None:
         self._session_counters.clear()
@@ -207,7 +207,6 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
     def _annotate_image_numbers(
         self,
         components: list[dict[str, Any]],
-        session_id: str,
         next_counter: int,
     ) -> int:
         """在图片组件后插入 TextComponent，返回更新后的 next_counter。"""
@@ -226,7 +225,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
                             sub_content = sub_msg.get("content")
                             if isinstance(sub_content, list):
                                 next_counter = self._annotate_image_numbers(
-                                    sub_content, session_id, next_counter,
+                                    sub_content, next_counter,
                                 )
         components[:] = result
         return next_counter
@@ -265,7 +264,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
 
         raw_message = message.get("raw_message")
         if isinstance(raw_message, list):
-            self._annotate_image_numbers(raw_message, session_id, next_counter)
+            self._annotate_image_numbers(raw_message, next_counter)
 
         return {
             "action": "continue",

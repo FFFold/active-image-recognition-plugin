@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "version": "2.0.0",
   "name": "主动识图插件",
-  "description": "关闭自动被动识图，为 Bot 提供主动识图工具，让 Bot 自己选择查看哪些图片",
+  "description": "为 Bot 提供主动识图工具，支持纯文本/多模态模式",
   "author": {
     "name": "Fold",
     "url": "https://github.com/FFFold"
