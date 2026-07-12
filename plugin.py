@@ -36,6 +36,8 @@ class RecognitionConfig(PluginConfigBase):
     mode: str = Field(default="text", description="识图模式：text（纯文本）或 multimodal（多模态）")
     dual_recognition: bool = Field(default=False, description="纯文本模式下同时开启框架被动识图")
     prompt: str = Field(default="", description="自定义识图提示词，使用 {question} 作为用户问题占位符")
+    use_custom_vlm_model: bool = Field(default=False, description="启用独立的 VLM 模型")
+    vlm_model: str = Field(default="", description="使用的 VLM 模型名称，例如 OpenCodeGo/kimi-k2.7-code")
 
 
 class CacheConfig(PluginConfigBase):
@@ -366,9 +368,13 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
 
         prompt_text = self._build_prompt(question)
 
+        model_name = "vlm"
+        if self.config.recognition.use_custom_vlm_model and self.config.recognition.vlm_model.strip():
+            model_name = self.config.recognition.vlm_model.strip()
+
         try:
             result = await self.ctx.llm.generate(
-                model="vlm",
+                model=model_name,
                 prompt=[
                     {
                         "role": "user",
