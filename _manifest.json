@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "主动识图插件",
   "description": "关闭自动被动识图，为 Bot 提供主动识图工具，让 Bot 自己选择查看哪些图片",
   "author": {
@@ -29,7 +29,9 @@
   ],
   "i18n": {
     "default_locale": "zh-CN",
-    "supported_locales": ["zh-CN"]
+    "supported_locales": [
+      "zh-CN"
+    ]
   },
   "id": "dev.fold.active-image-recognition"
 }
