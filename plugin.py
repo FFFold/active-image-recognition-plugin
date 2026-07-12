@@ -204,6 +204,74 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             "modified_kwargs": {"message": message},
         }
 
+    def _annotate_image_numbers(
+        self,
+        components: list[dict[str, Any]],
+        session_id: str,
+        next_counter: int,
+    ) -> int:
+        """在图片组件后插入 TextComponent，返回更新后的 next_counter。"""
+        result: list[dict[str, Any]] = []
+        for comp in components:
+            result.append(comp)
+            comp_type = comp.get("type", "")
+            if comp_type == "image":
+                result.append({"type": "text", "data": f" [图片 #{next_counter}]"})
+                next_counter += 1
+            elif comp_type == "forward":
+                forward_data = comp.get("data")
+                if isinstance(forward_data, list):
+                    for sub_msg in forward_data:
+                        if isinstance(sub_msg, dict):
+                            sub_content = sub_msg.get("content")
+                            if isinstance(sub_content, list):
+                                next_counter = self._annotate_image_numbers(
+                                    sub_content, session_id, next_counter,
+                                )
+        components[:] = result
+        return next_counter
+
+    @HookHandler(
+        "chat.receive.after_process",
+        name="annotate_image_numbers",
+        description="在框架识图描述后追加 [图片 #N] 编号",
+        mode=HookMode.BLOCKING,
+        order=HookOrder.NORMAL,
+    )
+    async def handle_after_process(self, message: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+        del kwargs
+
+        if not isinstance(message, dict):
+            return {"action": "continue"}
+
+        if not self.config.plugin.enabled:
+            return {"action": "continue"}
+
+        mode = self.config.recognition.mode
+        dual = self.config.recognition.dual_recognition
+        if not (mode == "text" and dual):
+            return {"action": "continue"}
+
+        session_id = message.get("session_id", "")
+        if not session_id:
+            return {"action": "continue"}
+
+        counter_range = self._pending_message_image_range.pop(session_id, None)
+        if counter_range is None:
+            return {"action": "continue"}
+
+        start_counter, _ = counter_range
+        next_counter = start_counter + 1
+
+        raw_message = message.get("raw_message")
+        if isinstance(raw_message, list):
+            self._annotate_image_numbers(raw_message, session_id, next_counter)
+
+        return {
+            "action": "continue",
+            "modified_kwargs": {"message": message},
+        }
+
     @Tool(
         "recognize_image",
         description=(
