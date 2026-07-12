@@ -164,7 +164,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
     @HookHandler(
         "chat.receive.before_process",
         name="strip_image_for_active_recognition",
-        description="拦截图片并替换为索引占位符，关闭被动识图",
+        description="拦截图片并替换为索引占位符",
         mode=HookMode.BLOCKING,
         order=HookOrder.EARLY,
     )
@@ -172,6 +172,9 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         del kwargs
 
         if not isinstance(message, dict):
+            return {"action": "continue"}
+
+        if not self.config.plugin.enabled:
             return {"action": "continue"}
 
         session_id = message.get("session_id", "")
@@ -182,7 +185,19 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         if not isinstance(raw_message, list):
             return {"action": "continue"}
 
-        self._process_components(raw_message, session_id)
+        mode = self.config.recognition.mode
+        dual = self.config.recognition.dual_recognition
+
+        start_counter = self._session_counters.get(session_id, 0)
+
+        if mode == "text" and dual:
+            self._walk_components(raw_message, session_id, strip=False)
+        else:
+            self._walk_components(raw_message, session_id, strip=True)
+
+        end_counter = self._session_counters.get(session_id, 0)
+        if end_counter > start_counter:
+            self._pending_message_image_range[session_id] = (start_counter, end_counter)
 
         return {
             "action": "continue",
