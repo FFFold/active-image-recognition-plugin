@@ -62,7 +62,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         self._session_counters: dict[str, int] = {}
         self._image_cache: dict[tuple[str, int], dict[str, Any]] = {}
         self._cache_keys: deque[tuple[str, int]] = deque()
-        self._pending_message_image_range: dict[str, tuple[int, int]] = {}
+        self._pending_message_image_range: dict[str, list[tuple[int, int]]] = {}
         self._prompt_cache: dict[str, str] = {}
 
     async def on_load(self) -> None:
@@ -197,7 +197,9 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
 
         end_counter = self._session_counters.get(session_id, 0)
         if end_counter > start_counter:
-            self._pending_message_image_range[session_id] = (start_counter, end_counter)
+            self._pending_message_image_range.setdefault(session_id, []).append(
+                (start_counter, end_counter)
+            )
 
         return {
             "action": "continue",
@@ -255,11 +257,11 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         if not session_id:
             return {"action": "continue"}
 
-        counter_range = self._pending_message_image_range.pop(session_id, None)
-        if counter_range is None:
+        ranges = self._pending_message_image_range.get(session_id)
+        if not ranges:
             return {"action": "continue"}
 
-        start_counter, _ = counter_range
+        start_counter, _ = ranges.pop(0)
         next_counter = start_counter + 1
 
         raw_message = message.get("raw_message")

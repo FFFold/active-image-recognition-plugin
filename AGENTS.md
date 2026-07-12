@@ -49,7 +49,7 @@
 ```bash
 ruff check plugin.py
 python -c "import ast; ast.parse(open('plugin.py', encoding='utf-8').read())"
-python -c "import json; json.load(open('_manifest.json'))"
+python -c "import json; json.load(open('_manifest.json', encoding='utf-8'))"
 ```
 
 ## 依赖
