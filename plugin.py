@@ -1,4 +1,4 @@
-"""主动识图插件 — 关闭自动被动识图，为 Bot 提供主动识图工具。"""
+"""主动识图插件 — 为 Bot 提供主动识图工具。"""
 
 from __future__ import annotations
 
@@ -10,9 +10,6 @@ from typing import Any
 from maibot_sdk import Field, HookHandler, MaiBotPlugin, PluginConfigBase, Tool
 from maibot_sdk.types import HookMode, HookOrder, ToolParameterInfo, ToolParamType
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_CUSTOM_PROMPTS_DIR = _PROJECT_ROOT / "data" / "custom_prompts"
-_PROMPTS_DIR = _PROJECT_ROOT / "prompts"
 _DEFAULT_LOCALE = "zh-CN"
 
 _DEFAULT_PROMPT = (
@@ -21,16 +18,6 @@ _DEFAULT_PROMPT = (
     "注意其主题和直观感受，输出一段平实文本，最多150字。"
 )
 
-_prompt_cache: dict[str, str | None] = {}
-
-
-def _load_description_prompt(locale: str) -> str | None:
-    for base in (_CUSTOM_PROMPTS_DIR, _PROMPTS_DIR):
-        path = base / locale / "image_description.prompt"
-        if path.is_file():
-            return path.read_text(encoding="utf-8").strip()
-    return None
-
 
 class PluginSectionConfig(PluginConfigBase):
     __ui_label__ = "插件"
@@ -38,19 +25,30 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_order__ = 0
 
     enabled: bool = Field(default=False, description="是否启用插件")
-    config_version: str = Field(default="1.0.0", description="配置版本")
+    config_version: str = Field(default="2.0.0", description="配置版本")
+
+
+class RecognitionConfig(PluginConfigBase):
+    __ui_label__ = "识图"
+    __ui_icon__ = "image"
+    __ui_order__ = 1
+
+    mode: str = Field(default="text", description="识图模式：text（纯文本）或 multimodal（多模态）")
+    dual_recognition: bool = Field(default=False, description="纯文本模式下同时开启框架被动识图")
+    prompt: str = Field(default="", description="自定义识图提示词，使用 {question} 作为用户问题占位符")
 
 
 class CacheConfig(PluginConfigBase):
     __ui_label__ = "缓存"
     __ui_icon__ = "database"
-    __ui_order__ = 1
+    __ui_order__ = 2
 
     max_images: int = Field(default=200, description="最大缓存的图片数量")
 
 
 class ActiveImageRecognitionConfig(PluginConfigBase):
     plugin: PluginSectionConfig = Field(default_factory=PluginSectionConfig)
+    recognition: RecognitionConfig = Field(default_factory=RecognitionConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
 
 
