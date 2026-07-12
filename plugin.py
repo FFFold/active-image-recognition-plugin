@@ -53,7 +53,7 @@ class ActiveImageRecognitionConfig(PluginConfigBase):
 
 
 class ActiveImageRecognitionPlugin(MaiBotPlugin):
-    """主动识图插件 — 关闭被动识图并暴露主动识图工具。"""
+    """主动识图插件 — 提供主动识图工具，支持纯文本/多模态模式。"""
 
     config_model = ActiveImageRecognitionConfig
 
@@ -62,21 +62,27 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         self._session_counters: dict[str, int] = {}
         self._image_cache: dict[tuple[str, int], dict[str, Any]] = {}
         self._cache_keys: deque[tuple[str, int]] = deque()
+        self._pending_message_image_range: dict[str, tuple[int, int]] = {}
+        self._prompt_cache: dict[str, str | None] = {}
 
     async def on_load(self) -> None:
         self._session_counters.clear()
         self._image_cache.clear()
         self._cache_keys.clear()
+        self._pending_message_image_range.clear()
+        self._prompt_cache.clear()
         self.ctx.logger.info("主动识图插件已加载")
 
     async def on_unload(self) -> None:
         self._session_counters.clear()
         self._image_cache.clear()
         self._cache_keys.clear()
+        self._pending_message_image_range.clear()
+        self._prompt_cache.clear()
         self.ctx.logger.info("主动识图插件已卸载")
 
     async def on_config_update(self, scope: str, config_data: dict[str, Any], version: str) -> None:
-        pass
+        self._prompt_cache.clear()
 
     def _trim_cache(self) -> None:
         max_size = max(0, self.config.cache.max_images)
@@ -98,22 +104,39 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             return "webp"
         return "png"
 
-    def _process_components(
+    # --- 图片组件遍历 ---
+
+    def _walk_components(
         self,
         components: list[dict[str, Any]],
         session_id: str,
+        *,
+        strip: bool,
     ) -> None:
+        """遍历消息组件，缓存图片，可选清除 binary 并设占位符。
+
+        strip=True:  清除 binary_data_base64，设 data="[图片 #N]"
+        strip=False: 仅缓存，不修改 content 和 binary
+        """
         for comp in components:
             comp_type = comp.get("type", "")
             if comp_type == "image":
-                self._process_single_image(comp, session_id)
+                self._cache_and_maybe_strip(comp, session_id, strip=strip)
             elif comp_type == "forward":
-                self._process_forward(comp, session_id)
+                forward_data = comp.get("data")
+                if isinstance(forward_data, list):
+                    for sub_msg in forward_data:
+                        if isinstance(sub_msg, dict):
+                            sub_content = sub_msg.get("content")
+                            if isinstance(sub_content, list):
+                                self._walk_components(sub_content, session_id, strip=strip)
 
-    def _process_single_image(
+    def _cache_and_maybe_strip(
         self,
         comp: dict[str, Any],
         session_id: str,
+        *,
+        strip: bool,
     ) -> None:
         counter = self._session_counters.get(session_id, 0) + 1
         self._session_counters[session_id] = counter
@@ -134,23 +157,9 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         self._cache_keys.append(key)
         self._trim_cache()
 
-        comp["data"] = f"[图片 #{counter}]"
-        comp.pop("binary_data_base64", None)
-
-    def _process_forward(
-        self,
-        comp: dict[str, Any],
-        session_id: str,
-    ) -> None:
-        forward_data = comp.get("data")
-        if not isinstance(forward_data, list):
-            return
-        for sub_msg in forward_data:
-            if not isinstance(sub_msg, dict):
-                continue
-            sub_content = sub_msg.get("content")
-            if isinstance(sub_content, list):
-                self._process_components(sub_content, session_id)
+        if strip:
+            comp["data"] = f"[图片 #{counter}]"
+            comp.pop("binary_data_base64", None)
 
     @HookHandler(
         "chat.receive.before_process",
