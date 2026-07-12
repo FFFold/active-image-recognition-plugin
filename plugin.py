@@ -313,9 +313,9 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
     @Tool(
         "recognize_image",
         description=(
-            "当你需要查看某张图片的内容时使用此工具。"
-            "查看消息历史中的图片，通过图片编号指定要识别的图片。"
-            "调用后返回图片的详细描述。"
+            "当你对图片存在疑问、需要仔细查看消息历史中某张图片的具体内容时使用此工具。"
+            "通过图片#字编号指定要查看的图片，可以对图片提出附带问题、带着问题查看图片。"
+            "调用后返回图片的详细描述，若附带问题，同时返回问题的答案。"
         ),
         core_tool=True,
         parameters=[
