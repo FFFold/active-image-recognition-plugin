@@ -10,6 +10,12 @@ from typing import Any
 from maibot_sdk import Field, HookHandler, MaiBotPlugin, PluginConfigBase, Tool
 from maibot_sdk.types import HookMode, HookOrder, ToolParameterInfo, ToolParamType
 
+try:
+    from src.services.llm_service import generate as _llm_service_generate, LLMServiceRequest as _LLMServiceRequest
+    _HAS_DIRECT_LLM = True
+except Exception:
+    _HAS_DIRECT_LLM = False
+
 _DEFAULT_LOCALE = "zh-CN"
 
 _DEFAULT_PROMPT = (
@@ -367,37 +373,57 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             }
 
         prompt_text = self._build_prompt(question)
+        image_content = {"type": "image_url", "image_url": {"url": f"data:image/{img_format};base64,{b64_data}"}}
 
-        model_name = "vlm"
-        if self.config.recognition.use_custom_vlm_model and self.config.recognition.vlm_model.strip():
-            model_name = self.config.recognition.vlm_model.strip()
+        use_custom = self.config.recognition.use_custom_vlm_model and self.config.recognition.vlm_model.strip()
 
-        try:
-            result = await self.ctx.llm.generate(
-                model=model_name,
-                prompt=[
-                    {
-                        "role": "user",
-                        "content": [
+        if use_custom and _HAS_DIRECT_LLM:
+            try:
+                service_result = await _llm_service_generate(
+                    _LLMServiceRequest(
+                        task_name="vlm",
+                        request_type="plugin.active_image_recognition",
+                        session_id=stream_id,
+                        prompt=[
                             {
-                                "type": "text",
-                                "text": prompt_text,
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/{img_format};base64,{b64_data}"},
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": prompt_text},
+                                    image_content,
+                                ],
                             },
                         ],
-                    },
-                ],
-            )
-        except Exception as e:
-            return {"content": f"识别图片 #{image_number} 时出错：{e}"}
+                        model_name=self.config.recognition.vlm_model.strip(),
+                    )
+                )
+                if not service_result.success:
+                    return {"content": f"识别图片 #{image_number} 失败：{service_result.error}"}
+                description = (service_result.completion.response or "").strip()
+            except Exception as e:
+                return {"content": f"识别图片 #{image_number} 时出错：{e}"}
+        else:
+            model_name = self.config.recognition.vlm_model.strip() if use_custom else "vlm"
+            try:
+                result = await self.ctx.llm.generate(
+                    model=model_name,
+                    prompt=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt_text},
+                                image_content,
+                            ],
+                        },
+                    ],
+                )
+            except Exception as e:
+                return {"content": f"识别图片 #{image_number} 时出错：{e}"}
 
-        if not isinstance(result, dict):
-            return {"content": f"识别图片 #{image_number} 失败：模型返回格式异常"}
+            if not isinstance(result, dict):
+                return {"content": f"识别图片 #{image_number} 失败：模型返回格式异常"}
 
-        description = result.get("response") or result.get("content") or ""
+            description = result.get("response") or result.get("content") or ""
+
         if not description:
             return {"content": f"图片 #{image_number} 识别结果为空"}
 

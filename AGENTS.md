@@ -28,6 +28,11 @@
 - `@Tool("recognize_image", core_tool=True)` — 纯文本模式返回 VLM 文本描述，多模态模式返回原始图片 base64
 - 参数：`image_number`（必填）、`question`（可选）
 
+### VLM 模型调用
+
+- `use_custom_vlm_model=true` 时，插件直接导入 `src.services.llm_service` 的 `generate` + `LLMServiceRequest`，传入 `model_name` 参数绕过宿主 `_cap_llm_generate` 的任务名解析限制
+- 导入失败时回退到 `ctx.llm.generate(model=vlm_model)`，此时宿主仍按任务名解析（仅兼容任务名）
+
 ### 提示词
 
 - 优先级：`{data_dir}/custom_prompts/{locale}/image_description.prompt` → `config.toml prompt` → 内置默认
