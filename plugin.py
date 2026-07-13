@@ -319,6 +319,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
 
     @Tool(
         "recognize_image",
+        timeout_ms=300000,
         description=(
             "当你对图片存在疑问、需要仔细查看消息历史中某张图片的具体内容时使用此工具。"
             "通过图片#字编号指定要查看的图片，可以对图片提出附带问题、带着问题查看图片。"
