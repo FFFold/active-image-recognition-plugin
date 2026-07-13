@@ -44,6 +44,7 @@ class RecognitionConfig(PluginConfigBase):
     prompt: str = Field(default="", description="自定义识图提示词，使用 {question} 作为用户问题占位符")
     use_custom_vlm_model: bool = Field(default=False, description="启用独立的 VLM 模型")
     vlm_model: str = Field(default="", description="使用的 VLM 模型名称，例如 OpenCodeGo/kimi-k2.7-code")
+    rpc_timeout_ms: int = Field(default=120000, description="RPC 调用超时时间（毫秒），默认 120s")
 
 
 class CacheConfig(PluginConfigBase):
@@ -406,6 +407,7 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
             try:
                 result = await self.ctx.llm.generate(
                     model=model_name,
+                    rpc_timeout_ms=self.config.recognition.rpc_timeout_ms,
                     prompt=[
                         {
                             "role": "user",

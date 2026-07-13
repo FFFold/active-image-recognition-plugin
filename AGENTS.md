@@ -11,7 +11,7 @@
 
 ### 配置
 
-- `[recognition]` 段控制模式：`mode`（"text"/"multimodal"）、`dual_recognition`（纯文本下开启框架被动识图）、`prompt`（自定义提示词）、`use_custom_vlm_model` / `vlm_model`（独立 VLM 模型）
+- `[recognition]` 段控制模式：`mode`（"text"/"multimodal"）、`dual_recognition`（纯文本下开启框架被动识图）、`prompt`（自定义提示词）、`use_custom_vlm_model` / `vlm_model`（独立 VLM 模型）、`rpc_timeout_ms`（RPC 超时毫秒，默认 120000）
 
 ### Hook 流程
 

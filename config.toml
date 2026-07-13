@@ -8,6 +8,7 @@ dual_recognition = false
 prompt = ""
 use_custom_vlm_model = false
 vlm_model = ""
+rpc_timeout_ms = 120000
 
 [cache]
 max_images = 200
