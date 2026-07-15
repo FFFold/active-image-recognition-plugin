@@ -74,6 +74,18 @@ class ActiveImageRecognitionPlugin(MaiBotPlugin):
         self._pending_message_image_range: dict[str, list[tuple[int, int]]] = {}
         self._prompt_cache: dict[str, str] = {}
 
+    def get_components(self) -> list[dict[str, Any]]:
+        components = super().get_components()
+        for comp in components:
+            raw = comp.get("metadata")
+            if isinstance(raw, dict):
+                nested = raw.pop("metadata", None)
+                if isinstance(nested, dict):
+                    for k, v in nested.items():
+                        if k not in raw:
+                            raw[k] = v
+        return components
+
     async def on_load(self) -> None:
         self._session_counters.clear()
         self._image_cache.clear()
